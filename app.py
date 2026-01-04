@@ -34,7 +34,7 @@ st.markdown("""
         font-size: 22px;
         font-weight: 600;
         margin-bottom: 12px;
-        color: #FFFFFF;
+        color: var(--text-color);
     }
     .metric-pill {
         background-color: #F5ECE1; /* Light beige/cream background */
@@ -124,7 +124,7 @@ try:
                     "font_size": 26, 
                     "showarrow": False,
                     "font_family": "sans-serif",
-                    "font_color": "white"
+                    "font_color": "#808495"
                 }],
                 showlegend=False,
                 margin=dict(t=20, b=20, l=20, r=20),
