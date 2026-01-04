@@ -76,18 +76,23 @@ with st.sidebar:
 try:
     sql_query = load_sql_query('review-check.sql')
     engine = get_connection()
-    with engine.connect() as conn:
-        df = pd.read_sql(
-            text(sql_query), 
-            conn, 
-            params={"time_window": db_interval}
-        )
+    with st.spinner(f'Fetching incident data for the last {selected_label}...'):
+        with engine.connect() as conn:
+            df = pd.read_sql(
+                text(sql_query), 
+                conn, 
+                params={"time_window": db_interval}
+            )
 
     if not df.empty:
         # 1. Prepare Data
         # Extract counts based on the 'incident_check' labels
         reviewed_count = df[df['incident_check'] == 'reviewed']['incident_count'].sum()
         needs_review_count = df[df['incident_check'] == 'needs-review']['incident_count'].sum()
+
+        # Ensure they are integers
+        reviewed_count = int(reviewed_count) if not pd.isna(reviewed_count) else 0
+        needs_review_count = int(needs_review_count) if not pd.isna(needs_review_count) else 0
         total_incidents = reviewed_count + needs_review_count
 
         # 2. Layout: Metric (Left) | Donut Chart (Center) | Metric (Right)
