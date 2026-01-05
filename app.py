@@ -47,6 +47,8 @@ st.markdown("""
         min-width: 150px;
         box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
     }
+    /* Style for the Leaderboard Table */
+    .stDataFrame { border: 1px solid #3d3d3d; border-radius: 10px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -78,22 +80,26 @@ try:
     engine = get_connection()
     with st.spinner(f'Fetching incident data for the last {selected_label}...'):
         with engine.connect() as conn:
-            df = pd.read_sql(
+            full_df = pd.read_sql(
                 text(sql_query), 
                 conn, 
                 params={"time_window": db_interval}
             )
 
-    if not df.empty:
-        # 1. Prepare Data
+    if not full_df.empty:
+
+        summary_df = full_df[full_df['report_type'] == 'summary']
+        leaderboard_df = full_df[full_df['report_type'] == 'leaderboard'].sort_values('count', ascending=False)
+        
+        # Prepare Data
         # Extract counts based on the 'incident_check' labels
-        reviewed_count = df[df['incident_check'] == 'reviewed']['incident_count'].sum()
-        needs_review_count = df[df['incident_check'] == 'needs-review']['incident_count'].sum()
+        reviewed_count = summary_df[summary_df['label'] == 'reviewed']['count'].sum()
+        needs_review_count = summary_df[summary_df['label'] == 'needs-review']['count'].sum()
 
         # Ensure they are integers
         reviewed_count = int(reviewed_count) if not pd.isna(reviewed_count) else 0
         needs_review_count = int(needs_review_count) if not pd.isna(needs_review_count) else 0
-        total_incidents = reviewed_count + needs_review_count
+        total_incidents = int(reviewed_count + needs_review_count)
 
         # 2. Layout: Metric (Left) | Donut Chart (Center) | Metric (Right)
         # vertical_alignment="center" keeps the pills level with the middle of the circle
@@ -109,11 +115,11 @@ try:
 
         with col_chart:
             fig = px.pie(
-                df, 
-                values='incident_count', 
-                names='incident_check', 
+                summary_df, 
+                values='count', 
+                names='label', 
                 hole=0.75, # Thinner ring for a cleaner look
-                color='incident_check',
+                color='label',
                 color_discrete_map={'needs-review':'#EF553B', 'reviewed':'#00CC96'}
             )
 
@@ -123,7 +129,6 @@ try:
                     "x": 0.5, "y": 0.5, 
                     "font_size": 26, 
                     "showarrow": False,
-                    "font_family": "sans-serif",
                     "font_color": "#808495"
                 }],
                 showlegend=False,
@@ -145,6 +150,27 @@ try:
                     <div class="metric-pill">{needs_review_count:,}</div>
                 </div>
             """, unsafe_allow_html=True)
+        
+        # 3. Leaderboard Table
+        st.divider()
+        st.subheader("Annotator Leaderboard")
+
+        if not leaderboard_df.empty:
+            # Displaying a clean table
+            display_ldb = leaderboard_df[['annotator', 'count']].rename(columns={'annotator': 'Annotator Name', 'count': 'Incidents Reviewed'})
+            
+            # Using st.columns to center the table or put a chart next to it
+            l_col, r_col = st.columns([2, 1])
+            with l_col:
+                st.dataframe(display_ldb, width='stretch', hide_index=True)
+            with r_col:
+                # Small Bar Chart for visual comparison
+                bar_fig = px.bar(display_ldb, x='Incidents Reviewed', y='Annotator Name', orientation='h',
+                                 color_discrete_sequence=['#00CC96'])
+                bar_fig.update_layout(height=300, margin=dict(t=0, b=0, l=0, r=0), yaxis={'categoryorder':'total ascending'})
+                st.plotly_chart(bar_fig, width='stretch')
+        else:
+            st.info("No reviews recorded by annotators in this timeframe.")
 
     else:
         st.info("✨ No incidents found in the last 24 hours.")
