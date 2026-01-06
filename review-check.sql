@@ -9,7 +9,7 @@ WITH filtered_events AS (
     FROM 
         dashcam_trip.event
     WHERE 
-        event_time_ms >= NOW() - INTERVAL '180 days'
+        event_time_ms >= CAST(:start_time AS TIMESTAMP) - INTERVAL '30 days'
         AND data_labelling_state IN ('2474f6f6-2255-5d95-b528-8d919704cce9', '0736aa8f-74c0-53a9-8a7e-a47b04aad903')
 )
 SELECT
@@ -21,7 +21,7 @@ FROM
     filtered_events
 WHERE 
     data_labelling_state = '0736aa8f-74c0-53a9-8a7e-a47b04aad903'
-    AND (last_mod_str)::timestamp >= NOW() - CAST(:time_window AS INTERVAL)
+    AND (last_mod_str)::timestamp BETWEEN CAST(:start_time AS TIMESTAMP) AND CAST(:end_time AS TIMESTAMP)
 
 UNION ALL
 
@@ -34,7 +34,7 @@ FROM
     filtered_events
 WHERE 
     data_labelling_state = '2474f6f6-2255-5d95-b528-8d919704cce9'
-    AND event_time_ms >= NOW() - CAST(:time_window AS INTERVAL)
+    AND event_time_ms BETWEEN CAST(:start_time AS TIMESTAMP) AND CAST(:end_time AS TIMESTAMP)
 
 UNION ALL
 
@@ -47,7 +47,7 @@ FROM
     filtered_events
 WHERE 
     data_labelling_state = '0736aa8f-74c0-53a9-8a7e-a47b04aad903'
-    AND (last_mod_str)::timestamp >= NOW() - CAST(:time_window AS INTERVAL)
+    AND (last_mod_str)::timestamp BETWEEN CAST(:start_time AS TIMESTAMP) AND CAST(:end_time AS TIMESTAMP)
     AND SPLIT_PART(raw_annotator, '@', 1) NOT IN ('dashcam-post-driving-event', 'anwar','tabasher')
 GROUP BY 
     annotator;

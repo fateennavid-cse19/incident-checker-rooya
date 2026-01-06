@@ -5,6 +5,7 @@ from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 import os
 import urllib.parse
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -54,36 +55,65 @@ st.markdown("""
 
 st.title("Dashcam Trip Incident Review")
 
+if 'reference_now' not in st.session_state:
+    st.session_state.reference_now = datetime.now()
+
 # --- Sidebar Controls ---
 with st.sidebar:
     st.header("Filters")
     
     # 1. Define Timeframe options
     timeframe_options = {
-        "1 Hour": "1 hour",
-        "24 Hours": "24 hours",
-        "7 Days": "7 days",
-        "30 Days": "30 days",
-        "90 Days": "90 days"
+        "1 Hour": timedelta(hours=1),
+        "24 Hours": timedelta(hours=24),
+        "7 Days": timedelta(days=7),
+        "30 Days": timedelta(days=30),
+        "90 Days": timedelta(days=90),
+        "Custom Range": "CUSTOM"
     }
     
     # 2. Add the Toggle (Selectbox or Pills)
     selected_label = st.selectbox("Select Timeframe", options=list(timeframe_options.keys()), index=1)
-    db_interval = timeframe_options[selected_label]
+    # Logic for Custom Date/Time Pickers
+    if selected_label == "Custom Range":
+        col1, col2 = st.columns(2)
+        with col1:
+            start_date = st.date_input("Start Date", st.session_state.reference_now - timedelta(days=7))
+            start_time = st.time_input("Start Time", datetime.min.time())
+        with col2:
+            end_date = st.date_input("End Date", st.session_state.reference_now.date())
+            end_time = st.time_input("End Time", st.session_state.reference_now.time())
+        
+        start_ts = datetime.combine(start_date, start_time)
+        end_ts = datetime.combine(end_date, end_time)
+
+        if start_ts > end_ts:
+            st.error("⚠️ Error: Start Time must be before End Time.")
+            st.stop() # Stops execution so query doesn't run with bad dates
+    else:
+        # Calculate start/end based on presets
+        end_ts = st.session_state.reference_now
+        start_ts = end_ts - timeframe_options[selected_label]
     
     st.divider()
     if st.button('🔄 Refresh Data'):
+        st.session_state.reference_now = datetime.now()
         st.rerun()
 
 try:
     sql_query = load_sql_query('review-check.sql')
     engine = get_connection()
-    with st.spinner(f'Fetching incident data for the last {selected_label}...'):
+    # Format times for Postgres
+    params = {
+        "start_time": start_ts.strftime('%Y-%m-%d %H:%M:%S'),
+        "end_time": end_ts.strftime('%Y-%m-%d %H:%M:%S')
+    }
+    with st.spinner(f'Fetching incident data from {start_ts.strftime("%b %d, %H:%M")} to {end_ts.strftime("%b %d, %H:%M")}...'):
         with engine.connect() as conn:
             full_df = pd.read_sql(
                 text(sql_query), 
                 conn, 
-                params={"time_window": db_interval}
+                params=params
             )
 
     if not full_df.empty:
