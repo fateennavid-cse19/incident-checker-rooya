@@ -183,24 +183,24 @@ try:
         
         # 3. Leaderboard Table
         st.divider()
-        st.subheader("Annotator Leaderboard")
+        with st.expander("Annotator Leaderboard"):
 
-        if not leaderboard_df.empty:
-            # Displaying a clean table
-            display_ldb = leaderboard_df[['annotator', 'count']].rename(columns={'annotator': 'Annotator Name', 'count': 'Incidents Reviewed'})
-            
-            # Using st.columns to center the table or put a chart next to it
-            l_col, r_col = st.columns([2, 1])
-            with l_col:
-                st.dataframe(display_ldb, width='stretch', hide_index=True)
-            with r_col:
-                # Small Bar Chart for visual comparison
-                bar_fig = px.bar(display_ldb, x='Incidents Reviewed', y='Annotator Name', orientation='h',
-                                 color_discrete_sequence=['#00CC96'])
-                bar_fig.update_layout(height=300, margin=dict(t=0, b=0, l=0, r=0), yaxis={'categoryorder':'total ascending'})
-                st.plotly_chart(bar_fig, width='stretch')
-        else:
-            st.info("No reviews recorded by annotators in this timeframe.")
+            if not leaderboard_df.empty:
+                # Displaying a clean table
+                display_ldb = leaderboard_df[['annotator', 'count']].rename(columns={'annotator': 'Annotator Name', 'count': 'Incidents Reviewed'})
+                
+                # Using st.columns to center the table or put a chart next to it
+                l_col, r_col = st.columns([2, 1])
+                with l_col:
+                    st.dataframe(display_ldb, width='stretch', hide_index=True)
+                with r_col:
+                    # Small Bar Chart for visual comparison
+                    bar_fig = px.bar(display_ldb, x='Incidents Reviewed', y='Annotator Name', orientation='h',
+                                    color_discrete_sequence=['#00CC96'])
+                    bar_fig.update_layout(height=300, margin=dict(t=0, b=0, l=0, r=0), yaxis={'categoryorder':'total ascending'})
+                    st.plotly_chart(bar_fig, width='stretch')
+            else:
+                st.info("No reviews recorded by annotators in this timeframe.")
 
     else:
         st.info("✨ No incidents found in the last 24 hours.")
