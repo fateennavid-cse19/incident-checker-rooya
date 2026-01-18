@@ -69,6 +69,7 @@ with st.sidebar:
         "7 Days": timedelta(days=7),
         "30 Days": timedelta(days=30),
         "90 Days": timedelta(days=90),
+        "All Time": "ALL",
         "Custom Range": "CUSTOM"
     }
     
@@ -90,6 +91,12 @@ with st.sidebar:
         if start_ts > end_ts:
             st.error("⚠️ Error: Start Time must be before End Time.")
             st.stop() # Stops execution so query doesn't run with bad dates
+    
+    elif selected_label == "All Time":
+        # Set start_ts to a date earlier than any possible record in your DB
+        start_ts = datetime(2000, 1, 1, 0, 0, 0) 
+        end_ts = st.session_state.reference_now
+
     else:
         # Calculate start/end based on presets
         end_ts = st.session_state.reference_now
